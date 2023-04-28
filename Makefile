@@ -1,5 +1,8 @@
-proj2: proj2.c
-	gcc -pthread -std=gnu99 -Wall -Wextra -Werror -pedantic proj.c -o proj2
+CC = gcc
+CFLAGS = -std=gnu99 -Wall -Wextra -Werror -pedantic -lpthread -lrt
+
+proj2: proj2.c proj2.h
+	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm *.o
+	rm -f *.o proj2
