@@ -1,5 +1,10 @@
 #include "proj2.h"
 
+//https://www.youtube.com/watch?v=mXo8wSXUKvo
+//https://www.youtube.com/watch?v=6KXvK6el5R4
+//https://moodle.vut.cz/pluginfile.php/577383/mod_resource/content/1/zadani-2023.pdf
+
+
 int NZ, NU, TZ, TU, F;  /// vytovření proměnných pro vstupy
 int counter = 1;        /// vytvoření counteru pro výstup   
 bool is_postal_open = false;
