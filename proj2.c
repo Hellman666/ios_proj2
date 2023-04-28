@@ -1,15 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <time.h>
-#include <ctype.h>
-
 #include "proj2.h"
 
 int NZ, NU, TZ, TU, F;  /// vytovření proměnných pro vstupy
 int counter = 1;        /// vytvoření counteru pro výstup   
 bool is_postal_open = false;
+sem_t *sem_queue_1;
+sem_t *sem_queue_2;
+sem_t *sem_queue_3;
 
 int main(int argc, char *argv[]) {
     if(argc != 6) {
@@ -39,48 +35,39 @@ int main(int argc, char *argv[]) {
 
     //pokud nejsou vstupy správné, ukončí program
     if(input_check(NZ, NU, TZ, TU, F) == 1) {
-    return 1;
+        return 1;
     }
     
 
-    for(int i = 0; i < NZ; i++) {
-        pid_t pid = fork();
-        if(pid == -1) {
-            fprintf(stderr, "Chyba: nepodařilo se vytvořit proces zákazníka\n");
-            return 1;
-        } else if (pid == 0) {
-            fprintf(stdout, "Proces zákazníka %d vytvořen\n", getpid());
-            return 0;
-        }
-    }
-    for(int i = 0; i < NU; i++) {
-        pid_t pid = fork();
-        if (pid == -1)
-        {
-            fprintf(stderr, "Chyba: nepodařilo se vytvořit proces úředníka\n");
-            return 1;
-        } else if (pid == 0) {
-            fprintf(stdout, "Proces úředníka %d vytvořen\n", getpid());
-            return 0;
-        }
-    }
+    // vytvoření procesů zákazníků
+    createProcesses(NZ, 0);
+    
+    // vytvoření procesů úředníků
+    createProcesses(NU, 1);
 
-    int wait_time = F/2 + rand() % (F/2 +1);
+    int lower_f = F/2;
+    int wait_time = (rand() % (F - lower_f)) + lower_f;
+
     usleep(wait_time * 1000);
     printf("%d \n", wait_time * 1000);
     is_postal_open = true;
 
-        for(int i = 0; i <= NZ; i++) {
+    for(int i = 0; i <= NZ; i++) {
       customer(file, i, TZ);
     }
 
     fprintf(file, "%d: closing\n", counter++);
     printf("Procesy skončily\n");
     is_postal_open = false;
-    fclose(file);   
+    
+    
+    clear(file);   
 
+    
     printf("Načtené argumenty:\n");
     printf("NZ: %d\nNU: %d\nTZ: %d\nTU: %d\nF: %d\n", NZ, NU, TZ, TU, F);
+
+
     return 0;
 }
 
@@ -130,6 +117,57 @@ void customer(FILE *file, int idZ, int TZ) {
    }
 }
 
+void officer(FILE *file, int idU, int TU) {
+
+    // Create semaphores
+    sem_queue_1 = sem_open("/sem_queue_1", O_CREAT, 0666, 0);
+    sem_queue_2 = sem_open("/sem_queue_2", O_CREAT, 0666, 0);
+    sem_queue_3 = sem_open("/sem_queue_3", O_CREAT, 0666, 0);
+
+    
+
+    // Use the semaphores
+    sem_wait(sem_queue_1); // Wait on semaphore for queue 1
+    sem_post(sem_queue_2); // Signal semaphore for queue 2
+
+
+    //vytvoření náhodného čísla od 1 do 3
+    int queue_number = random_number(1, 3, 1);   
+    switch(queue_number) {
+        case 1:
+            // přiřadit úředníka ke frontě 1
+            sem_wait(&sem_queue_1);
+            break;
+        case 2:
+            // přiřadit úředníka ke frontě 2
+            sem_wait(&sem_queue_2);
+            break;
+        case 3:
+            // přiřadit úředníka ke frontě 3
+            sem_wait(&sem_queue_3);
+            break;
+        default:
+            // nepřiřazeno, nastala chyba
+            break;
+    }
+
+    srand(time(NULL));
+    int wait_time = rand() % (TU +1);
+
+    fprintf(file, "%d: Z %d: started\n", counter++, idU);
+    usleep(wait_time * 1000);
+    
+    
+    //zjistí, jestli je pošta otevřena
+    if(is_postal_open == true) {
+        fprintf(file, "%d: U %d: entering office for a service %d\n", counter++, idU, queue_number);
+        fprintf(file, "%d: U %d: called by office worker\n", counter++, idU);
+        fprintf(file, "%d: U %d: going home\n", counter++, idU); 
+    } else {
+        fprintf(file, "%d: U %d: going home\n", counter++, idU); 
+    }
+}
+
 //funkce pro výpočet náhodného čísla
 int random_number(int lower, int upper, int count) {
    int num;
@@ -138,4 +176,25 @@ int random_number(int lower, int upper, int count) {
       num = (rand() % (upper - lower + 1)) + lower;
    }
    return num;
+}
+
+void clear(FILE *file) {
+    fclose(file);
+}
+
+void create_processes(int processCount, int processType) {
+    for(int i = 0; i < processCount; i++) {
+        pid_t pid = fork();
+        if(pid == -1) {
+            fprintf(stderr, "Chyba: nepodařilo se vytvořit proces\n");
+            exit(1);
+        } else if (pid == 0) {
+            if(processType == 0) {
+                fprintf(stdout, "Proces zákazníka %d vytvořen\n", getpid());
+            } else {
+                fprintf(stdout, "Proces úředníka %d vytvořen\n", getpid());
+            }
+            exit(0);
+        }
+    }
 }
