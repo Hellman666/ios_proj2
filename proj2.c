@@ -12,7 +12,7 @@
 //sem_init(mutex, 1, 1); 
 //sem_destroy(mutex);
 //semafory a sdílená paměť se dělá jednou a bude pro všechny procesy
-//!setbuf(file, NULL);
+//!setbuf(file, NULL); / fflush()
 
 
 int NZ, NU, TZ, TU, F;  /// vytovření proměnných pro vstupy
