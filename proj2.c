@@ -4,13 +4,20 @@
 //https://www.youtube.com/watch?v=6KXvK6el5R4
 //https://moodle.vut.cz/pluginfile.php/577383/mod_resource/content/1/zadani-2023.pdf
 
+//sem_t *mutex;
+//mutex = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+//mmap = sdílená paměť
+//unmap - alternativa na čištění paměti
+//munmap() - vytvoří podprocesy?
+//sem_init(mutex, 1, 1); 
+//sem_destroy(mutex);
+//semafory a sdílená paměť se dělá jednou a bude pro všechny procesy
+//!setbuf(file, NULL);
+
 
 int NZ, NU, TZ, TU, F;  /// vytovření proměnných pro vstupy
 int counter = 1;        /// vytvoření counteru pro výstup   
 bool is_postal_open = false;
-sem_t *sem_queue_1;
-sem_t *sem_queue_2;
-sem_t *sem_queue_3;
 
 int main(int argc, char *argv[]) {
     if(argc != 6) {
@@ -22,6 +29,7 @@ int main(int argc, char *argv[]) {
     FILE *file;
     file = fopen("proj2.out", "w");
 
+    //Zabezpečení, aby každý argument byl číslo
     char *params[] = {"argument 1", "argument 2", "argument 3", "argument 4", "argument 5"};
     for (int i = 1; i < argc; i++) {
         for (int j = 0; argv[i][j] != '\0'; j++) {
@@ -45,10 +53,10 @@ int main(int argc, char *argv[]) {
     
 
     // vytvoření procesů zákazníků
-    createProcesses(NZ, 0);
+    create_process(NZ, 0);
     
     // vytvoření procesů úředníků
-    createProcesses(NU, 1);
+    create_process(NU, 1);
 
     int lower_f = F/2;
     int wait_time = (rand() % (F - lower_f)) + lower_f;
@@ -67,7 +75,7 @@ int main(int argc, char *argv[]) {
     
     
     clear(file);   
-
+    while(wait(NULL) > 0);
     
     printf("Načtené argumenty:\n");
     printf("NZ: %d\nNU: %d\nTZ: %d\nTU: %d\nF: %d\n", NZ, NU, TZ, TU, F);
@@ -103,7 +111,7 @@ int input_check(int NZ, int NU, int TZ, int TU, int F) {
 void customer(FILE *file, int idZ, int TZ) {
 
    //vytvoření náhodného čísla od 1 do 3
-   int x = random_number(1, 3, 1);   
+   int x = random_number(1, 3);   
 
    srand(time(NULL));
    int wait_time = rand() % (TZ +1);
@@ -123,38 +131,8 @@ void customer(FILE *file, int idZ, int TZ) {
 }
 
 void officer(FILE *file, int idU, int TU) {
-
-    // Create semaphores
-    sem_queue_1 = sem_open("/sem_queue_1", O_CREAT, 0666, 0);
-    sem_queue_2 = sem_open("/sem_queue_2", O_CREAT, 0666, 0);
-    sem_queue_3 = sem_open("/sem_queue_3", O_CREAT, 0666, 0);
-
-    
-
-    // Use the semaphores
-    sem_wait(sem_queue_1); // Wait on semaphore for queue 1
-    sem_post(sem_queue_2); // Signal semaphore for queue 2
-
-
     //vytvoření náhodného čísla od 1 do 3
-    int queue_number = random_number(1, 3, 1);   
-    switch(queue_number) {
-        case 1:
-            // přiřadit úředníka ke frontě 1
-            sem_wait(&sem_queue_1);
-            break;
-        case 2:
-            // přiřadit úředníka ke frontě 2
-            sem_wait(&sem_queue_2);
-            break;
-        case 3:
-            // přiřadit úředníka ke frontě 3
-            sem_wait(&sem_queue_3);
-            break;
-        default:
-            // nepřiřazeno, nastala chyba
-            break;
-    }
+    int queue_number = random_number(1, 3);   
 
     srand(time(NULL));
     int wait_time = rand() % (TU +1);
@@ -174,16 +152,14 @@ void officer(FILE *file, int idU, int TU) {
 }
 
 //funkce pro výpočet náhodného čísla
-int random_number(int lower, int upper, int count) {
-   int num;
-   for(int i = 0; i < count; i++)
-   {
-      num = (rand() % (upper - lower + 1)) + lower;
-   }
-   return num;
+int random_number(int min, int max) {
+    int num = (rand() % (max - min)) + min;
+    return num;
 }
 
 void clear(FILE *file) {
+    //sem_destroy();
+    //munmap(mutex?, sizeof(sem_t));
     fclose(file);
 }
 
