@@ -14,7 +14,6 @@
 
 
 int input_check(int argc, char *argv[]);
-int random_number(int lower, int upper);
 void customer(int idZ, int TZ);
 void officer(int idU, int TU);
 void clear();

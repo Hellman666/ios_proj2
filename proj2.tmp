@@ -1,15 +1,20 @@
-1: U 2: started
-2: U 2: taking break
-3: Z 1: started
-4: Z 2: started
-5: U 1: started
-6: U 1: taking break
-7: Z 3: started
-8: closing
-9: U 2: break finished
-10: U 2: going home
-11: U 1: break finished
-12: U 1: going home
-13: Z 1: going home
-14: Z 2: going home
-15: Z 3: going home
+1: U 1: started
+2: U 1: taking break
+3: U 3: started
+4: Z 3: started
+5: Z 4: started
+6: Z 2: started
+7: Z 5: started
+8: Z 1: started
+9: U 2: started
+10: U 3: taking break
+11: closing
+12: U 1: break finished
+13: Z 4: going home
+14: U 1: going home
+15: Z 5: going home
+16: Z 3: going home
+17: Z 1: going home
+18: Z 2: going home
+19: U 3: break finished
+20: U 3: going home
