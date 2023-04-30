@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "*.embeddedhtml": "html",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "semaphore.h": "c",
+        "stdio.h": "c"
     }
 }

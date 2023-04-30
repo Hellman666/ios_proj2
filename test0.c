@@ -236,3 +236,94 @@ void clerk(FILE *file, int idU, int TU, queue_t **queues) {
 
 //TODO: vytvořit funkci queue_is_empty, ve které se projdou všechny fronty a zjistí se, která je prázdná/prázdné
 
+
+
+
+
+
+
+
+
+
+
+
+void customer(FILE *file, int idZ, int TZ) {
+    
+   //vytvoření náhodného čísla od 1 do 3
+   int x = random_number(1, 3);   
+
+   srand(time(NULL));
+   int wait_time = rand() % (TZ +1);
+
+   fprintf(file, "%d: Z %d: started\n", counter++, idZ);
+   usleep(wait_time * 1000);
+   
+   
+   //zjistí, jestli je pošta otevřena
+   if(is_postal_open == true) {
+      fprintf(file, "%d: Z %d: entering office for a service %d\n", counter++, idZ, x);
+      fprintf(file, "%d: Z %d: called by office worker\n", counter++, idZ);
+      fprintf(file, "%d: Z %d: going home\n", counter++, idZ); 
+   } else {
+      fprintf(file, "%d: Z %d: going home\n", counter++, idZ); 
+   }
+}
+
+
+
+//my_print("U %d: started\n", idU);
+
+    //pokud v žádné frontě nečeká zákazní a pošta je otevřená
+    //while(*is_postal_open == true || (*queue_one_counter) > 0 || (*queue_two_counter) > 0 || (*queue_three_counter) > 0){
+        //     if(((*queue_one_counter) > 0 || (*queue_two_counter) > 0 || (*queue_three_counter) > 0) && *is_postal_open == true) {
+                
+        //             srand(getpid());
+        //             int service = (rand() % 3) + 1;
+        //     while(1){
+        //             my_print("U %d: serving a service of type %d\n", idU, service);
+        //             printf("\nservice urednik: %d\n", service);
+        
+            
+        //             if (service == 1) {
+        //                 if((*queue_one_counter > 0)) {
+        //                     sem_wait(queue_one);
+        //                     (*queue_one_counter)--;
+        //                     sem_post(queue_one);
+        //                     usleep((rand() % 11) * 1000);
+        //                 } else {
+        //                     service = 2;
+        //                 }
+        //             }
+        //             if (service == 2) {
+        //                 if((*queue_two_counter > 0)) {
+        //                     sem_wait(queue_two);
+        //                     (*queue_two_counter)--;
+        //                     sem_post(queue_two);
+        //                     usleep((rand() % 11) * 1000);
+        //                 } else {
+        //                     service = 3;
+        //                 }
+        //             }
+        //             if (service == 3) {
+        //                 if((*queue_three_counter > 0)) {
+        //                     sem_wait(queue_three);
+        //                     (*queue_three_counter)--;
+        //                     sem_post(queue_three);
+        //                     usleep((rand() % 11) * 1000);
+        //                 }
+        //                 else {
+        //                     service = 1;
+        //                 }
+        //             } 
+
+        //             my_print("U %d: service finished\n", idU);
+        //         }
+        //     } else {
+        //         my_print("U %d: taking break\n", idU);
+        //         usleep((rand() % (TU + 1))*1000);
+        //         my_print("U %d: break finished\n", idU);
+        //     }
+        // //}
+        // if(is_postal_open == false){
+        //     my_print("U %d: going home\n", idU);
+        // } 

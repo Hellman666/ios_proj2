@@ -7,12 +7,17 @@
 #include <time.h>
 #include <ctype.h>
 #include <semaphore.h>
+#include <sys/wait.h>
+#include <stdarg.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 
-int input_check(int NU, int NZ, int TZ, int TU, int F);
-int random_number(int lower, int upper, int count);
-void customer(FILE *file, int idZ, int TZ);
-void open_postal_office();
-void close_postal_office();
-void clear(FILE *file);
+
+int input_check(int argc, char *argv[]);
+int random_number(int lower, int upper);
+void customer(int idZ, int TZ);
+void officer(int idU, int TU);
+void clear();
+void create_process(int processCount, int processType);
 
 #endif

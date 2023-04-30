@@ -1,20 +1,53 @@
 #include "proj2.h"
 
-sem_t *postal_sem;        
+//testy:
+// https://github.com/nukusumus/IOS
+// https://github.com/matusHubinsky/IOS-2-project-deadlock-tester
+// https://github.com/Blacki005/IOS_tester_2023
+
+//Zadání:
+//https://moodle.vut.cz/pluginfile.php/577383/mod_resource/content/1/zadani-2023.pdf
+
+//sem_t *mutex;
+//mutex = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+//mmap = sdílená paměť
+//unmap - alternativa na čištění paměti
+//munmap() - vytvoří podprocesy?
+//sem_init(mutex, 1, 1); 
+//sem_destroy(mutex);
+//semafory a sdílená paměť se dělá jednou a bude pro všechny procesy
+//!setbuf(file, NULL); / fflush()
+
+
+//budu chtít volat v každém dítěti:
+//srand pro kazdy proces aby měl random cisla
+//usleep po vytvoreni
+//usleep(1000 * (rand() % (TI + 1)));
+
+// opisu z knizky
+
+
+
+
+
+sem_t *mutex;       //todo: můžu smazat
+sem_t *customers;   //todo: můžu smazat
+sem_t *officers;    //todo: můžu smazat
 sem_t *counter;
 sem_t *queue_one;
 sem_t *queue_two;
 sem_t *queue_three;
-sem_t *officer_sem;
-sem_t *customer_sem;
 
 int *cislo_radku;
-int NZ, NU, TZ, TU, F;
-bool *is_postal_open;   
+int NZ, NU, TZ, TU, F;          /// vytovření proměnných pro vstupy
+bool *is_postal_open;    //  vytvoření proměnné, jestli je pošta open
 FILE *file;
 int *queue_one_counter;
 int *queue_two_counter;
 int *queue_three_counter;
+
+bool queue;
+
 
 void my_print(const char * format, ...){
     sem_wait(counter);
@@ -28,11 +61,11 @@ void my_print(const char * format, ...){
     sem_post(counter);
 }
 
-int main(int argc, char *argv[])
-{
-    srand(time(NULL));
+int main(int argc, char *argv[]) {
 
-    postal_sem = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    mutex = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    customers = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
+    officers = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     counter = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     cislo_radku = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     is_postal_open = mmap(NULL, sizeof(bool), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
@@ -42,143 +75,113 @@ int main(int argc, char *argv[])
     queue_one_counter = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     queue_two_counter = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     queue_three_counter = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
-    officer_sem = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
-    customer_sem = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
     
-    sem_init(postal_sem, 1, 1);
+
+    sem_init(mutex, 1, 1);
+    sem_init(customers, 1, 0);
+    sem_init(officers, 1, 0);
     sem_init(counter, 1, 1);
     sem_init(queue_one, 1, 1);
     sem_init(queue_two, 1, 1);
     sem_init(queue_three, 1, 1);
-    sem_init(officer_sem, 1, 0);
-    sem_init(customer_sem, 1, 0);
 
-    *queue_one_counter = 0;
-    *queue_two_counter = 0;
-    *queue_three_counter = 0;
+    srand(time(NULL));
 
-    NZ = atoi(argv[1]);  
-    NU = atoi(argv[2]);  
-    TZ = atoi(argv[3]);  
-    TU = atoi(argv[4]);  
-    F = atoi(argv[5]);
+    //přiřazení vstupů k proměnným
+    NZ = atoi(argv[1]);  //počet zákazníků
+    NU = atoi(argv[2]);  //počet úředníků
+    TZ = atoi(argv[3]);  // Maximální čas, který zákazní čeká, než vejde na poštu
+    TU = atoi(argv[4]);  // Maximální délka přestávky úředníka
+    F = atoi(argv[5]);   // Maximální čas, po kterém je pošta uzavřena
 
+    //pokud nejsou vstupy správné, ukončí program
     if(input_check(argc, argv) == 1) {
         return 1;
     }
 
+    //otevření/vytvoření souboru proj2.out
     file = fopen("proj2.out", "w");
-    *is_postal_open = true;
-    create_process(NU, 1); //úředník
-    create_process(NZ, 0); //zákazník
     
-    int wait_time = ((rand() % (F/2 + 1)) + F/2);
-    usleep(wait_time*1000);
-    printf("%d \n", wait_time * 1000);
-    *is_postal_open = false;
-    my_print("closing\n");
+    *is_postal_open = true;
 
+    // vytvoření procesů úředníků
+    create_process(NU, 1);
+
+    // vytvoření procesů zákazníků
+    create_process(NZ, 0);
+    
+    
+
+    
+
+    // vygeneruje se náhodný čas od F/2 po F
+    int wait_time = ((rand() % (F/2 + 1)) + F/2);
+    usleep(wait_time * 1000);
+    printf("%d \n", wait_time * 1000);     
+    *is_postal_open = false;
+
+
+    my_print("closing\n");
+    printf("Procesy skončily\n");
+    
+    
+       
     while(wait(NULL) > 0);
-    clear();
-    printf("Načtené argumenty:\nNZ: %d\nNU: %d\nTZ: %d\nTU: %d\nF: %d\n", NZ, NU, TZ, TU, F);
+    clear(file);
+
+    printf("Načtené argumenty:\n");
+    printf("NZ: %d\nNU: %d\nTZ: %d\nTU: %d\nF: %d\n", NZ, NU, TZ, TU, F);
+
 
     return 0;
 }
 
-void officer(int idU, int TU){
-    my_print("U %d: started\n", idU);
-    
-    while((*is_postal_open) == true){
-        if((*queue_one_counter) > 0 || (*queue_two_counter) > 0 || (*queue_three_counter) > 0) {
-            printf("\npostal: %d, one: %d, two: %d, three: %d\n", *is_postal_open, *queue_one_counter,  *queue_two_counter, *queue_three_counter);
-            int service = (rand() % 3) + 1;
-
-            if(service == 1 && (*queue_one_counter == 0)){
-            service = 2;
-            }
-            if(service == 2 && (*queue_two_counter == 0)){
-                service = 3;
-            }
-            if(service == 3 && (*queue_three_counter == 0)){
-                service = 1;
-            }
-
-            if(service == 1 && (*queue_one_counter > 0)){
-            my_print("U %d: serving a service of type %d\n", idU, service);
-            sem_wait(queue_one);
-            (*queue_one_counter)--;
-            sem_post(queue_one);
-            usleep((rand() % 11) * 1000);
-            my_print("U %d: service finished\n", idU);
-            }
-            
-            if(service == 2 && (*queue_two_counter > 0)){
-                my_print("U %d: serving a service of type %d\n", idU, service);
-                sem_wait(queue_two);
-                (*queue_two_counter)--;
-                sem_post(queue_two);
-                usleep((rand() % 11) * 1000);
-                my_print("U %d: service finished\n", idU);
-            }
-
-            if(service == 3 && (*queue_three_counter > 0)){
-                my_print("U %d: serving a service of type %d\n", idU, service);
-                sem_wait(queue_three);
-                (*queue_three_counter)--;
-                sem_post(queue_three);
-
-                
-                usleep((rand() % 11) * 1000);
-                my_print("U %d: service finished\n", idU);
-            }
-        }
-
-        if((*queue_one_counter == 0) && (*queue_two_counter == 0) && (*queue_three_counter == 0) && *is_postal_open == true){
-            my_print("U %d: taking break\n", idU);
-            usleep((rand() % (TU + 1))*1000);
-            my_print("U %d: break finished\n", idU);
-        }
-    }
-
-    sem_wait(postal_sem);
-    if((*is_postal_open) == false){
-        my_print("U %d: going home\n", idU);
-    }
-    sem_post(postal_sem);
-}
-
-void customer(int idZ, int TZ){
-    srand(time(NULL) + idZ);
+void customer(int idZ, int TZ) {  
     my_print("Z %d: started\n", idZ);
     usleep((rand() % (TZ + 1)) * 1000);
-
+    
     if(*is_postal_open == false){
         my_print("Z %d: going home\n", idZ);
         exit(0);
     }
 
-    int service = ((rand() % 3) + 1);
+    queue = true;
+    srand(getpid());
+    int service = (rand() % 3) + 1;
     my_print("Z %d: entering office for a service %d\n", idZ, service);
-    printf("service zakaznik: %d\n", service);
-    if (service == 1) {
-        sem_wait(queue_one);
-        (*queue_one_counter)++;
-        sem_post(queue_one);
-    }
-    if (service == 2) {
-        sem_wait(queue_two);
-        (*queue_two_counter)++;
-        sem_post(queue_two);
-    }
-    if (service == 3) {
-    sem_wait(queue_three);
-        (*queue_three_counter)++;
-        sem_post(queue_three);
-    }
+    //printf("\nservice zakaznik: %d\n", service);
     my_print("Z %d: called by office worker\n", idZ);
-    usleep((rand() %11) * 1000);
+    
+    // vyčkání náhodné doby na dokončení žádosti
+    
+    usleep((rand() % (TZ + 1)) * 1000);
+
     my_print("Z %d: going home\n", idZ);
+    queue = false;
+
 }
+
+void officer(int idU, int TU) {
+    my_print("U %d: started\n", idU);
+    srand(getpid());
+    int service = (rand() % 3) + 1;
+    my_print("U %d: serving a service of type %d\n", idU, service);
+    printf("\nservice urednik: %d\n", service);
+    usleep((rand() % 11) * 1000);
+    my_print("U %d: service finished\n", idU);
+
+    //pokud v žádné frontě nečeká zákazní a pošta je otevřená
+    if(queue == false && *is_postal_open == true){
+        my_print("U %d: taking break\n", idU);
+        usleep((rand() % (TU + 1))*1000);
+        my_print("U %d: break finished\n", idU);
+    }
+    
+    if(*is_postal_open == false){
+        my_print("U %d: going home\n", idU);
+    }
+}
+
 
 void create_process(int processCount, int processType) {
     for(int i = 1; i < processCount+1; i++) {
@@ -202,20 +205,20 @@ void create_process(int processCount, int processType) {
 }
 
 void clear() {
-    sem_destroy(postal_sem);
+    sem_destroy(mutex);
+    sem_destroy(customers);
+    sem_destroy(officers);
     sem_destroy(counter);
     sem_destroy(queue_one);
     sem_destroy(queue_two);
     sem_destroy(queue_three);
-    sem_destroy(customer_sem);
-    sem_destroy(officer_sem);
-    munmap(postal_sem, sizeof(sem_t));
+    munmap(mutex, sizeof(sem_t));
+    munmap(customers, sizeof(sem_t));
+    munmap(officers, sizeof(sem_t));
     munmap(counter, sizeof(sem_t));
     munmap(queue_one, sizeof(sem_t));
     munmap(queue_two, sizeof(sem_t));
     munmap(queue_three, sizeof(sem_t));
-    munmap(customer_sem, sizeof(sem_t));
-    munmap(officer_sem, sizeof(sem_t));
     munmap(cislo_radku, sizeof(int));
     munmap(is_postal_open, sizeof(bool));
     munmap(queue_one_counter, sizeof(int));
