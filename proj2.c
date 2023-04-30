@@ -47,9 +47,9 @@ int main(int argc, char *argv[])
     
     sem_init(postal_sem, 1, 1);
     sem_init(counter, 1, 1);
-    sem_init(queue_one, 1, 1);
-    sem_init(queue_two, 1, 1);
-    sem_init(queue_three, 1, 1);
+    sem_init(queue_one, 1, 0);
+    sem_init(queue_two, 1, 0);
+    sem_init(queue_three, 1, 0);
     sem_init(officer_sem, 1, 0);
     sem_init(customer_sem, 1, 0);
 
@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
 }
 
 void officer(int idU, int TU){
+    srand(time(NULL) + idU);
     my_print("U %d: started\n", idU);
     
     while((*is_postal_open) == true){
@@ -94,7 +95,7 @@ void officer(int idU, int TU){
             int service = (rand() % 3) + 1;
 
             if(service == 1 && (*queue_one_counter == 0)){
-            service = 2;
+                service = 2;
             }
             if(service == 2 && (*queue_two_counter == 0)){
                 service = 3;
@@ -104,32 +105,27 @@ void officer(int idU, int TU){
             }
 
             if(service == 1 && (*queue_one_counter > 0)){
-            my_print("U %d: serving a service of type %d\n", idU, service);
-            sem_wait(queue_one);
-            (*queue_one_counter)--;
-            sem_post(queue_one);
-            usleep((rand() % 11) * 1000);
-            my_print("U %d: service finished\n", idU);
+                my_print("U %d: serving a service of type %d\n", idU, service);
+                sem_post(queue_one);
+                usleep((rand() % 11) * 1000);
+                my_print("U %d: service finished\n", idU);
+                //sem_wait(queue_one);
             }
             
             if(service == 2 && (*queue_two_counter > 0)){
                 my_print("U %d: serving a service of type %d\n", idU, service);
-                sem_wait(queue_two);
-                (*queue_two_counter)--;
                 sem_post(queue_two);
                 usleep((rand() % 11) * 1000);
                 my_print("U %d: service finished\n", idU);
+                //sem_wait(queue_two);
             }
 
             if(service == 3 && (*queue_three_counter > 0)){
                 my_print("U %d: serving a service of type %d\n", idU, service);
-                sem_wait(queue_three);
-                (*queue_three_counter)--;
                 sem_post(queue_three);
-
-                
                 usleep((rand() % 11) * 1000);
                 my_print("U %d: service finished\n", idU);
+                //sem_wait(queue_three);
             }
         }
 
@@ -161,21 +157,35 @@ void customer(int idZ, int TZ){
     my_print("Z %d: entering office for a service %d\n", idZ, service);
     printf("service zakaznik: %d\n", service);
     if (service == 1) {
-        sem_wait(queue_one);
+        
         (*queue_one_counter)++;
-        sem_post(queue_one);
+        sem_wait(queue_one);
     }
     if (service == 2) {
-        sem_wait(queue_two);
+        
         (*queue_two_counter)++;
-        sem_post(queue_two);
+        sem_wait(queue_two);
     }
     if (service == 3) {
-    sem_wait(queue_three);
+    
         (*queue_three_counter)++;
-        sem_post(queue_three);
+        sem_wait(queue_three);
     }
+
     my_print("Z %d: called by office worker\n", idZ);
+
+    if(service == 1){
+        (*queue_one_counter)--;
+        //sem_post(queue_one);
+    }
+    if(service == 2){
+        (*queue_two_counter)--;
+        //sem_post(queue_two);
+    }
+    if(service == 3){
+        (*queue_three_counter)--;
+        //sem_post(queue_three);
+    }
     usleep((rand() %11) * 1000);
     my_print("Z %d: going home\n", idZ);
 }
